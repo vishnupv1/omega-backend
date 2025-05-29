@@ -4,6 +4,57 @@ const { protect } = require('../middleware/auth.middleware');
 const User = require('../models/user.model');
 const router = express.Router();
 
+// Register new user
+router.post('/register', [
+    [
+        check('firstName', 'First name is required').not().isEmpty(),
+        check('lastName', 'Last name is required').not().isEmpty(),
+        check('email', 'Please include a valid email').isEmail(),
+        check('password', 'Password must be at least 6 characters').isLength({ min: 6 }),
+        check('phone', 'Phone number is required').not().isEmpty()
+    ]
+], async (req, res) => {
+    try {
+        const { firstName, lastName, email, password, phone, address } = req.body;
+
+        // Check if user already exists
+        let user = await User.findOne({ email });
+        if (user) {
+            return res.status(400).json({
+                success: false,
+                message: 'User already exists'
+            });
+        }
+
+        // Create new user
+        user = new User({
+            firstName,
+            lastName,
+            email,
+            password,
+            phone,
+            address
+        });
+
+        await user.save();
+
+        // Remove password from response
+        const userResponse = user.toObject();
+        delete userResponse.password;
+
+        res.status(201).json({
+            success: true,
+            data: userResponse
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({
+            success: false,
+            message: 'Error registering user'
+        });
+    }
+});
+
 // Get user profile
 router.get('/profile', protect, async (req, res) => {
     try {
